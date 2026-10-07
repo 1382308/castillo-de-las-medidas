@@ -134,8 +134,9 @@ form.join input{font-family:var(--f-body);font-size:26px;padding:6px 10px;border
 #hint{margin:0;font-size:24px;padding:10px;border:4px solid #6a52c9;background:#ece6ff;color:#2a1f5c;animation:glow 1.2s steps(6) 2}
 @keyframes glow{50%{box-shadow:0 0 0 6px #b9a8ff88}}
 #numForm{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-#ans{font-family:var(--f-body);font-size:30px;width:9ch;padding:4px 10px;border:4px solid var(--ink);background:#fff8e6;color:var(--ink)}
-#unit{font-size:28px}
+.pair{display:flex;gap:6px;align-items:center}
+.pair input{font-family:var(--f-body);font-size:30px;width:4.5ch;padding:4px 8px;text-align:center;border:4px solid var(--ink);background:#fff8e6;color:var(--ink)}
+.pair .y{font-size:26px}
 .spell-head{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:baseline}
 .spell-head h3{font-size:10px}
 #spellRule{font-size:19px;color:#6b4a22}
@@ -199,7 +200,9 @@ form.join input{font-family:var(--f-body);font-size:26px;padding:6px 10px;border
     <ul>
       <li>Flechas o W A S D para moverte.</li>
       <li>Cada mazmorra es un laberinto: encuentra a la bestia para abrir la salida.</li>
-      <li>1 cubo = 1 cm.</li>
+      <li>Juego de la X: arriba va el producto (×), abajo la suma (+).</li>
+      <li>Encuentra los dos números que cumplen ambas.</li>
+      <li>Dos bestias por sala: vence a las dos para abrir la salida.</li>
       <li>1 hechizo por turno.</li>
       <li>Atrapa fantasmitas = más hechizos.</li>
     </ul>
@@ -249,8 +252,11 @@ form.join input{font-family:var(--f-body);font-size:26px;padding:6px 10px;border
         <p id="qText"></p>
         <p id="hint" hidden></p>
         <form id="numForm" autocomplete="off">
-          <input id="ans" inputmode="decimal" aria-label="Tu respuesta">
-          <span id="unit"></span>
+          <div class="pair">
+            <input id="ans1" inputmode="numeric" maxlength="2" aria-label="Primer número">
+            <span class="y">y</span>
+            <input id="ans2" inputmode="numeric" maxlength="2" aria-label="Segundo número">
+          </div>
           <button class="btn" type="submit">Lanzar respuesta</button>
         </form>
         <div id="fb" hidden></div>
@@ -277,7 +283,7 @@ form.join input{font-family:var(--f-body);font-size:26px;padding:6px 10px;border
   </div>
   <div class="log parch">
     <h2>Problemas</h2>
-    <div class="tbl"><table><thead><tr><th>#</th><th>Figura</th><th>Problema</th><th>Respuesta</th><th>Hechizo</th></tr></thead><tbody id="logBody"></tbody></table></div>
+    <div class="tbl"><table><thead><tr><th>#</th><th>Nivel</th><th>Problema</th><th>Respuesta</th><th>Hechizo</th></tr></thead><tbody id="logBody"></tbody></table></div>
   </div>
   <div class="end-actions">
     <button class="btn" id="again" type="button">Otra vez</button>
@@ -303,9 +309,9 @@ const fitAll=()=>FIT.forEach(fit);
 FIT.forEach(el=>{el.classList.add('fit');new ResizeObserver(()=>fit(el)).observe(el)});
 addEventListener('resize',fitAll);
 
-/* ---------- Azar con semilla (cada alumno recibe problemas distintos) ---------- */
+/* ---------- Azar con semilla (cada jugador recibe problemas distintos) ---------- */
 function hashStr(s){let h=2166136261>>>0;for(const c of s){h^=c.codePointAt(0);h=Math.imul(h,16777619)>>>0}return h}
-let S=null;   // estado guardado del alumno
+let S=null;   // estado guardado del jugador
 let B=null;   // batalla activa
 function rand(){let t=S.rng=(S.rng+0x6D2B79F5)>>>0;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}
 const ri=(a,b)=>a+Math.floor(rand()*(b-a+1));
@@ -317,7 +323,7 @@ const mpick=a=>a[Math.floor(Math.random()*a.length)]; // solo cosmético
 const SPELL_IDS=['lumos','revelio','accio','protego'];
 const SPELLS={
   lumos:{name:'Lumos',desc:'Fórmula'},
-  revelio:{name:'Revelio',desc:'Numera cubos'},
+  revelio:{name:'Revelio',desc:'Pares'},
   accio:{name:'Accio',desc:'Pista'},
   protego:{name:'Protego',desc:'Escudo'}
 };
@@ -327,15 +333,21 @@ const HOUSES=[
   {name:'Casa del Águila',c:'#2a4fa8',C:'#c08a4a'},
   {name:'Casa del Tejón',c:'#d9a521',C:'#2b2b2b'}
 ];
-const KINDS=['cuadrado','rectangulo','cubo','prisma'];
-const KIND={cuadrado:'Cuadrado',rectangulo:'Rectángulo',cubo:'Cubo',prisma:'Prisma rectangular'};
+const KIND={facil:'Tablas 1–6',dificil:'Tablas 7–9'};
+const PER_BOSS=3;      // problemas por jefe de sala
+const FINAL_N=6;       // problemas del jefe final
 const ATTACKS=['¡Expelliarmus!','¡Desmaius!','¡Petrificus Totalus!','¡Rictusempra!','¡Flipendo!'];
 const ENEMIES=[
-  {id:'cuadrado',kind:'cuadrado',book:1,zone:'torre',x:20,y:8,name:'Fluffy',room:'Libro 1 · Perro de tres cabezas',spr:'fluffy',atk:'¡Una canción lo duerme!'},
-  {id:'rectangulo',kind:'rectangulo',book:2,zone:'mazmo',x:20,y:8,name:'Basilisco',room:'Libro 2 · Rey de las serpientes',spr:'snake'},
-  {id:'cubo',kind:'cubo',book:3,zone:'biblio',x:20,y:8,name:'Dementor',room:'Libro 3 · Guardián de Azkaban',spr:'dementor',atk:'¡Expecto Patronum!'},
-  {id:'prisma',kind:'prisma',book:4,zone:'comedor',x:20,y:8,name:'Colacuerno húngaro',room:'Libro 4 · Dragón del torneo',spr:'dragon',pal:{d:'#3a3540',D:'#1c1a22',y:'#c8913a'}},
-  {id:'jefe',kind:'mix',book:7,zone:'cemen',x:11,y:8,name:'Nagini',room:'Libro 7 · Jefe final',spr:'snake',pal:{q:'#7d8a68',Q:'#434d38',Y:'#e23c3c'}}
+  // dos jefes por laberinto (su posición se asigna en buildMazes); n = problemas del combate
+  {id:'fluffy',kind:'facil',n:PER_BOSS,book:1,zone:'torre',x:20,y:8,name:'Fluffy',room:'Libro 1 · Perro de tres cabezas',spr:'fluffy',atk:'¡Una canción lo duerme!'},
+  {id:'cerbero',kind:'facil',n:PER_BOSS,book:1,zone:'torre',x:20,y:8,name:'Cerbero',room:'Libro 1 · Perro del inframundo',spr:'fluffy',pal:{n:'#4a4560',N:'#262236'}},
+  {id:'basilisco',kind:'facil',n:PER_BOSS,book:2,zone:'mazmo',x:20,y:8,name:'Basilisco',room:'Libro 2 · Rey de las serpientes',spr:'snake'},
+  {id:'serpfuego',kind:'facil',n:PER_BOSS,book:2,zone:'mazmo',x:20,y:8,name:'Serpiente de fuego',room:'Libro 2 · Guardiana de las mazmorras',spr:'snake',pal:{q:'#e8701a',Q:'#b8540c',Y:'#ffd23a'}},
+  {id:'dementor',kind:'dificil',n:PER_BOSS,book:3,zone:'biblio',x:20,y:8,name:'Dementor',room:'Libro 3 · Guardián de Azkaban',spr:'dementor',atk:'¡Expecto Patronum!'},
+  {id:'boggart',kind:'dificil',n:PER_BOSS,book:3,zone:'biblio',x:20,y:8,name:'Boggart',room:'Libro 3 · Cambiaformas del armario',spr:'dementor',pal:{Z:'#4a2a6a',z:'#2e1a44',u:'#d9a2ff'}},
+  {id:'colacuerno',kind:'dificil',n:PER_BOSS,book:4,zone:'comedor',x:20,y:8,name:'Colacuerno húngaro',room:'Libro 4 · Dragón del torneo',spr:'dragon',pal:{d:'#3a3540',D:'#1c1a22',y:'#c8913a'}},
+  {id:'hocicorto',kind:'dificil',n:PER_BOSS,book:4,zone:'comedor',x:20,y:8,name:'Dragón de hocico corto',room:'Libro 4 · Dragón plateado y azul',spr:'dragon',pal:{d:'#7fa6c9',D:'#3f6a94',y:'#a8e6ff'}},
+  {id:'jefe',kind:'mix',n:FINAL_N,book:7,zone:'cemen',x:11,y:8,name:'Nagini',room:'Libro 7 · Jefe final',spr:'snake',pal:{q:'#7d8a68',Q:'#434d38',Y:'#e23c3c'}}
 ];
 
 /* ---------- Pixel art ---------- */
@@ -491,10 +503,10 @@ const ZONES={
 "....SSSS......SSSS....",
 "......................",
 "T....................T"]},
-  torre:{name:'Torre de los Cuadrados',sub:'Cuadrados',exits:{w:'sala',e:'mazmo'},gate:'e',maze:'#'},
-  mazmo:{name:'Mazmorras',sub:'Rectángulos',exits:{w:'torre',e:'biblio'},gate:'e',maze:'I'},
-  biblio:{name:'Biblioteca',sub:'Cubos y prismas',exits:{w:'mazmo',e:'comedor'},gate:'e',maze:'B'},
-  comedor:{name:'Gran Comedor',sub:'Prismas',exits:{w:'biblio',e:'cemen'},gate:'e',maze:'#'},
+  torre:{name:'Torre de las Tablas',sub:'Tablas 1–6',exits:{w:'sala',e:'mazmo'},gate:'e',maze:'#'},
+  mazmo:{name:'Mazmorras',sub:'Tablas 1–6',exits:{w:'torre',e:'biblio'},gate:'e',maze:'I'},
+  biblio:{name:'Biblioteca',sub:'Tablas 7–9',exits:{w:'mazmo',e:'comedor'},gate:'e',maze:'B'},
+  comedor:{name:'Gran Comedor',sub:'Tablas 7–9',exits:{w:'biblio',e:'cemen'},gate:'e',maze:'#'},
   cemen:{name:'Cementerio',sub:'Jefe final',exits:{w:'comedor'},wall:'t',open:'G',rows:[
 "GGGGGGGGGGGGGGGGGGGGGG",
 "GGRGGRGGRGGGGRGGRGGRGG",
@@ -527,7 +539,7 @@ for(const z of Object.values(ZONES)){if(z.maze)continue;
 }
 const Z=()=>ZONES[S.zone];
 
-/* ---------- Laberintos: distintos para cada alumno, la bestia se esconde en un callejón ---------- */
+/* ---------- Laberintos: distintos para cada jugador, la bestia se esconde en un callejón ---------- */
 function seededRng(seed){let a=seed>>>0;return()=>{a=(a+0x6D2B79F5)>>>0;let t=a;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296}}
 function buildMazes(){
   for(const[zid,z]of Object.entries(ZONES)){if(!z.maze)continue;
@@ -549,14 +561,19 @@ function buildMazes(){
     const cands=Object.keys(dist).map(k=>k.split(',').map(Number)).filter(([x,y])=>x%2&&y%2&&x>3&&!(x>=19&&y>=5&&y<=11))
       .sort((a,b)=>dist[b]-dist[a]);
     const dead=cands.filter(([x,y])=>[[1,0],[-1,0],[0,1],[0,-1]].filter(([dx,dy])=>g[y+dy][x+dx]==='.').length===1);
-    const pool=dead.length?dead:cands,[bx,by]=pool[Math.floor(r()*Math.ceil(pool.length/2))];
-    Object.assign(guardOf(zid),{x:bx,y:by});
+    // cada jefe en un callejón distinto, separados entre sí
+    const pool=dead.length?dead:cands,taken=[];
+    for(const e of guardsOf(zid)){
+      let src=pool.filter(([x,y])=>taken.every(([tx,ty])=>Math.abs(tx-x)+Math.abs(ty-y)>=8));
+      if(!src.length)src=pool.filter(([x,y])=>!taken.some(([tx,ty])=>tx===x&&ty===y));
+      const[bx,by]=src[Math.floor(r()*Math.ceil(src.length/2))];taken.push([bx,by]);Object.assign(e,{x:bx,y:by})}
   }
 }
 const SOLID=new Set(['#','T','S','B','C','t','X','R','I']);
 const tile=(x,y,z=S.zone)=>(ZONES[z].map[y]||'')[x]||'#';
-const guardOf=z=>ENEMIES.find(e=>e.zone===z);
-const gateOpen=(z=S.zone)=>{const e=guardOf(z);return!e||S.defeated.includes(e.id)};
+const guardsOf=z=>ENEMIES.filter(e=>e.zone===z);
+const pending=z=>guardsOf(z).filter(e=>!S.defeated.includes(e.id));
+const gateOpen=(z=S.zone)=>pending(z).length===0;
 const walkable=(x,y,z=S.zone)=>{const t=tile(x,y,z);return t==='X'?gateOpen(z):!SOLID.has(t)};
 // las bestias miden 2×2 en pantalla; en campo abierto bloquean 3×3 casillas, en laberinto solo la suya
 const enemyAt=(x,y,z=S.zone)=>ENEMIES.find(e=>e.zone===z&&!S.defeated.includes(e.id)&&(ZONES[z].maze?e.x===x&&e.y===y:Math.abs(e.x-x)<=1&&Math.abs(e.y-y)<=1));
@@ -644,15 +661,14 @@ function update(dt){
       const e=enemyAt(nx,ny);
       if(e){if(S.met.includes(e.id)){keys.clear();startBattle(e)}else appear(e);return}
       if(walkable(nx,ny)){P.tx=nx;P.ty=ny;P.moving=true}
-      else if(tile(nx,ny)==='X')say('Cerrado. Vence las 4 salas.');
+      else if(tile(nx,ny)==='X')say(`Cerrado. Faltan ${pending(S.zone).length} bestia${pending(S.zone).length>1?'s':''}.`);
     }
   }
   if(P.moving){
     const sp=dt*0.075,gx=P.tx*TS,gy=P.ty*TS;
     P.px+=Math.sign(gx-P.px)*Math.min(sp,Math.abs(gx-P.px));P.py+=Math.sign(gy-P.py)*Math.min(sp,Math.abs(gy-P.py));P.step+=dt;
     if(P.px===gx&&P.py===gy){const ox=P.x;P.moving=false;P.x=P.tx;P.y=P.ty;
-      const e=guardOf(S.zone);
-      if(e&&!S.defeated.includes(e.id)&&!S.met.includes(e.id)){
+      for(const e of pending(S.zone)){if(S.met.includes(e.id))continue;
         if(Z().maze){const d=Math.max(Math.abs(P.x-e.x),Math.abs(P.y-e.y));if(d<=2){appear(e);return}if(d<=6)say('Se oye un gruñido muy cerca…')}
         else if(ox<e.x-4&&P.x>=e.x-4){appear(e);return}}
       save()}
@@ -679,11 +695,11 @@ function enterZone(){
   const z=Z();$('#roomTag').textContent=z.name;
   const zb=$('#zoneBanner');zb.querySelector('b').textContent=z.name;zb.querySelector('span').textContent=z.sub;
   zb.classList.remove('go');void zb.offsetWidth;zb.classList.add('go');
-  const e=ENEMIES.find(e=>e.zone===S.zone);
-  if(!e)say('Camina al este →');
-  else if(S.defeated.includes(e.id))say(`${z.name} ✓ · paso abierto →`);
-  else if(S.met.includes(e.id))say(`${e.name} bloquea el paso.`);
-  else say(e.kind==='mix'?'Algo se arrastra entre las tumbas…':'Laberinto: encuentra a la bestia. Sigue sus ojos rojos.');
+  const gs=guardsOf(S.zone),left=pending(S.zone),blocking=left.find(e=>S.met.includes(e.id));
+  if(!gs.length)say('Camina al este →');
+  else if(!left.length)say(`${z.name} ✓ · paso abierto →`);
+  else if(blocking)say(`${blocking.name} bloquea el paso.`);
+  else say(gs[0].kind==='mix'?'Algo se arrastra entre las tumbas…':`Laberinto: encuentra ${left.length>1?`a las ${left.length} bestias`:'a la bestia'}. Sigue sus ojos rojos.`);
   updateHUD();save();
 }
 
@@ -712,7 +728,7 @@ function render(t){
     fg.globalCompositeOperation='destination-out';fg.fillStyle=hole;fg.fillRect(cx-64,cy-64,128,128);fg.globalCompositeOperation='source-over';
     ctx.drawImage(z.fog,0,0);
     const dk=ctx.createRadialGradient(cx,cy,40,cx,cy,120);dk.addColorStop(0,'rgba(6,0,12,0)');dk.addColorStop(1,'rgba(6,0,12,.45)');ctx.fillStyle=dk;ctx.fillRect(0,0,MW*TS,MH*TS);
-    const e=guardOf(S.zone);if(e&&!S.defeated.includes(e.id)&&!S.met.includes(e.id)&&Math.floor(t/500)%4){
+    if(Math.floor(t/500)%4)for(const e of pending(S.zone)){if(S.met.includes(e.id))continue;
       ctx.fillStyle='#ff2a2a';ctx.fillRect(e.x*TS+4,e.y*TS+7,2,2);ctx.fillRect(e.x*TS+10,e.y*TS+7,2,2)}}
   for(let i=0;i<3;i++){const bx=((t/(22+i*9))+i*150)%(MW*TS+40)-20,by=24+i*88+Math.sin(t/380+i*2)*14;
     drawSprite(ctx,Math.floor(t/130+i)%2?SPR.bat:SPR.bat2,Math.round(bx),Math.round(by))}
@@ -725,118 +741,71 @@ function renderSlide(t){
   if(k>=1){TR=null;enterZone()}
 }
 
-/* ---------- Generador de problemas (solo multiplicaciones) ---------- */
+/* ---------- Generador de problemas: juego de la X (producto arriba, suma abajo, solo positivos) ---------- */
+// facil: tablas del 1 al 6 · dificil: al menos un factor del 7 al 9 (el otro del 2 al 9). Sin pares repetidos hasta agotar el banco.
+const PAIRS={facil:[],dificil:[]};
+for(let a=1;a<=6;a++)for(let b=a+1;b<=6;b++)PAIRS.facil.push([a,b]);
+for(let b=7;b<=9;b++)for(let a=2;a<b;a++)PAIRS.dificil.push([a,b]);
+const tri=(b,c)=>`x² + ${b}x + ${c}`;
+const fac=(m,n)=>`(x + ${m})(x + ${n})`;
 function gen(kind,stage){
-  const D=(n,label,unk=false)=>({n,label,unk});
-  const p={kind,stage,type:'num',sym:'?',
-    formula:{cuadrado:'Área = lado × lado',rectangulo:'Área = base × altura',cubo:'Volumen = arista × arista × arista',prisma:'Volumen = largo × ancho × alto'}[kind]};
-  const set=(dims,ans,text,accio,explain)=>Object.assign(p,{dims,answer:ans,text,revelio:'Cuenta los cubos.',accio,explain});
-  if(stage==='calc'){p.unit=kind==='cubo'||kind==='prisma'?'cm³':'cm²';
-    if(kind==='cuadrado'){const l=ri(2,9);set([D(l,`${l} cm`),D(l,`${l} cm`)],l*l,`Área\n${l} × ${l} = ?`,`${l} filas de ${l}.`,`${l} × ${l} = ${l*l}`)}
-    if(kind==='rectangulo'){const b=ri(3,10);let h=ri(2,8);if(h===b)h=b-1;set([D(b,`${b} cm`),D(h,`${h} cm`)],b*h,`Área\n${b} × ${h} = ?`,`${h} filas de ${b}.`,`${b} × ${h} = ${b*h}`)}
-    if(kind==='cubo'){const a=ri(2,5);set([D(a,`${a} cm`),D(a,`${a} cm`),D(a,`${a} cm`)],a**3,`Volumen\n${a} × ${a} × ${a} = ?`,`${a} × ${a} = ${a*a}, luego × ${a}.`,`${a} × ${a} × ${a} = ${a**3}`)}
-    if(kind==='prisma'){const l=ri(2,5),a=ri(2,4),h=ri(2,5);set([D(l,`${l} cm`),D(a,`${a} cm`),D(h,`${h} cm`)],l*a*h,`Volumen\n${l} × ${a} × ${h} = ?`,`${l} × ${a} = ${l*a}, luego × ${h}.`,`${l} × ${a} × ${h} = ${l*a*h}`)}
-  }else{p.unit='cm';
-    if(kind==='cuadrado'){const l=ri(2,10),A=l*l;set([D(l,'?'),D(l,'?')],l,`Lado\n? × ? = ${A}`,'Cuenta los cubos de un lado.',`${l} × ${l} = ${A}`)}
-    if(kind==='rectangulo'){const b=ri(2,10),h=ri(2,8),A=b*h;
-      if(rand()<.5)set([D(b,`${b} cm`),D(0,'?',true)],h,`Altura\n${b} × ? = ${A}`,`Tabla del ${b}.`,`${b} × ${h} = ${A}`);
-      else set([D(0,'?',true),D(h,`${h} cm`)],b,`Base\n? × ${h} = ${A}`,`Tabla del ${h}.`,`${b} × ${h} = ${A}`)}
-    if(kind==='prisma'){const v={largo:ri(2,5),ancho:ri(2,4),alto:ri(2,5)},K=['largo','ancho','alto'],V=v.largo*v.ancho*v.alto;
-      const u=pick(K),[k0,k1]=K.filter(k=>k!==u),eq=K.map(k=>k===u?'?':v[k]).join(' × ');
-      set(K.map(k=>k===u?D(0,'?',true):D(v[k],`${v[k]} cm`)),v[u],`${u[0].toUpperCase()+u.slice(1)}\n${eq} = ${V}`,
-        `${v[k0]} × ${v[k1]} = ${v[k0]*v[k1]}`,`${eq.replace('?',v[u])} = ${V}`)}
-  }
-  return p;
+  S.used=S.used||{};const used=S.used[kind]=S.used[kind]||[];
+  let av=PAIRS[kind].filter(([a,b])=>!used.includes(a+'-'+b));
+  if(!av.length){used.length=0;av=PAIRS[kind]}
+  const[m,n]=av[Math.floor(rand()*av.length)];used.push(m+'-'+n);
+  const c=m*n,b=m+n;
+  const pairs=[];for(let i=1;i*i<=c;i++)if(c%i===0)pairs.push(`${i}×${c/i}`);
+  return{kind,stage,c,b,
+    text:stage==='tri'?`Factoriza\n${tri(b,c)}\n(x + ?)(x + ?)`:`Encuentra los dos números\n? × ? = ${c}\n? + ? = ${b}`,
+    formula:'m × n = arriba y m + n = abajo. Así x² + bx + c = (x + m)(x + n).',
+    revelio:`Pares de ${c}: ${pairs.join(', ')}.`,
+    accio:`Uno de los números es ${m}.`,
+    explain:`Eran ${m} y ${n}: ${m} × ${n} = ${c} y ${m} + ${n} = ${b}${stage==='tri'?` → ${fac(m,n)}`:''}`,
+    short:`producto ${c} · suma ${b}`};
 }
 
-/* ---------- Figuras con cubos (1 cubo = 1 cm) ---------- */
-const MIST=3;                                     // ancho visual de la niebla
-const sol=d=>d.unk&&d.n===0?1:d.n;                // cubos sólidos dibujados en el eje
-const ext=d=>sol(d)+(d.unk?MIST:0);
+/* ---------- Figura: la X ---------- */
 const COL={top:'#ffb45a',mid:'#ef7a1a',dark:'#b8540c',edge:'#2a1206'};
 function label(g,txt,x,y,align,size=22,color='#f6e7c1'){
   g.font=`${size}px VT323, ui-monospace, monospace`;g.textAlign=align;g.textBaseline='middle';
   g.lineWidth=4;g.strokeStyle='#120e20';g.strokeText(txt,x,y);g.fillStyle=color;g.fillText(txt,x,y)}
-const num=(g,t,x,y)=>label(g,String(t),x,y,'center',18,'#ffe27a');
 function sparkles(g,x,y,w,h){g.fillStyle='#e4dcff';for(let i=0;i<14;i++){const sx=x+Math.random()*w,sy=y+Math.random()*h;g.fillRect(sx,sy-2,1,5);g.fillRect(sx-2,sy,5,1)}}
 
 function drawFig(){
-  const p=B.p,cv=$('#fig'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+  const p=B.p,cv=$('#fig'),g=cv.getContext('2d'),W=cv.width,H=cv.height,cx=W/2,cy=H/2;
   g.clearRect(0,0,W,H);g.fillStyle='#17122a';g.fillRect(0,0,W,H);
-  (p.dims.length===2?draw2D:draw3D)(g,p,W,H,B.rev);
-  const unk=p.dims.some(d=>d.unk);
-  $('#figCap').textContent='1 cubo = 1 cm'+(unk?' · niebla = ?':'');
-}
-function draw2D(g,p,W,H,rev){
-  const[dx,dy]=p.dims,cols=ext(dx),rows=ext(dy);
-  const s=Math.floor(Math.min((W-170)/cols,(H-90)/rows,34)),fw=cols*s,fh=rows*s;
-  const ox=Math.round((W-fw)/2+34),oy=Math.round((H-fh)/2-12);
-  const b=Math.max(2,s/8|0);
-  for(let i=0;i<cols;i++)for(let j=0;j<rows;j++){
-    const X=ox+i*s,Y=oy+(rows-1-j)*s;
-    if(i<sol(dx)&&j<sol(dy)){g.fillStyle=COL.edge;g.fillRect(X,Y,s,s);g.fillStyle=COL.mid;g.fillRect(X+1,Y+1,s-2,s-2);
-      g.fillStyle=COL.top;g.fillRect(X+1,Y+1,s-2,b);g.fillRect(X+1,Y+1,b,s-2);g.fillStyle=COL.dark;g.fillRect(X+1,Y+s-1-b,s-2,b);g.fillRect(X+s-1-b,Y+1,b,s-2)}
-    else{g.fillStyle='rgba(154,134,255,.30)';g.fillRect(X,Y,s,s)}
-  }
-  if(dx.unk||dy.unk){
-    g.setLineDash([6,4]);g.strokeStyle='#b9a8ff';g.lineWidth=2;g.strokeRect(ox+1,oy+1,fw-2,fh-2);g.setLineDash([]);
-    const mx=dx.unk&&!dy.unk?ox+sol(dx)*s:ox,my=oy,mw=dx.unk&&!dy.unk?MIST*s:fw,mh=dy.unk&&!dx.unk?MIST*s:fh;
-    sparkles(g,mx,my,mw,mh);label(g,p.sym,mx+mw/2,my+mh/2,'center',44,'#e4dcff');
-  }
-  if(rev){for(let i=0;i<(dx.unk?dx.n:sol(dx));i++)num(g,i+1,ox+i*s+s/2,oy+fh+12);
-    for(let j=0;j<(dy.unk?dy.n:sol(dy));j++)num(g,j+1,ox-12,oy+(rows-1-j)*s+s/2)}
-  label(g,dx.label,ox+fw/2,oy+fh+(rev?36:20),'center');
-  label(g,dy.label,ox-(rev?28:12),oy+fh/2,'right');
-}
-function draw3D(g,p,W,H,rev){
-  const[dx,dy,dz]=p.dims,Lx=ext(dx),Ly=ext(dy),Lz=ext(dz);
-  const s=Math.floor(Math.min((W-180)/(Lx+Ly),(H-90)/((Lx+Ly)/2+Lz),34));
-  const ox=Math.round(W/2-(Lx-Ly)*s/2),oy=Math.round(H/2-((Lx+Ly)*s/2-Lz*s)/2-10);
-  const Pt=(x,y,z)=>[ox+(x-y)*s,oy+(x+y)*s/2-z*s];
-  const poly=(pts,fill,stroke)=>{g.beginPath();pts.forEach((q,i)=>i?g.lineTo(q[0],q[1]):g.moveTo(q[0],q[1]));g.closePath();
-    if(fill){g.fillStyle=fill;g.fill()}if(stroke){g.strokeStyle=stroke;g.stroke()}};
-  const faces=(a,b2)=>{const[x0,y0,z0]=a,[x1,y1,z1]=b2;return{
-    top:[Pt(x0,y0,z1),Pt(x1,y0,z1),Pt(x1,y1,z1),Pt(x0,y1,z1)],
-    left:[Pt(x0,y1,z1),Pt(x1,y1,z1),Pt(x1,y1,z0),Pt(x0,y1,z0)],
-    right:[Pt(x1,y0,z1),Pt(x1,y1,z1),Pt(x1,y1,z0),Pt(x1,y0,z0)]}};
-  const nU=p.dims.filter(d=>d.unk).length;
-  // varias medidas desconocidas (cubo de arista x + n): los cubos conocidos van en la esquina frontal y la niebla detrás
-  const s0=nU>1?[Lx-sol(dx),Ly-sol(dy),0]:[0,0,0];
-  const solids=()=>{g.lineWidth=1;for(let k=0;k<sol(dz);k++)for(let i=0;i<sol(dx);i++)for(let j=0;j<sol(dy);j++){
-    const f=faces([s0[0]+i,s0[1]+j,k],[s0[0]+i+1,s0[1]+j+1,k+1]);poly(f.top,COL.top,COL.edge);poly(f.left,COL.mid,COL.edge);poly(f.right,COL.dark,COL.edge)}};
-  const mist=()=>{const a0=[0,0,0];if(nU===1)p.dims.forEach((d,i)=>{if(d.unk)a0[i]=sol(d)});
-    const f=faces(a0,[Lx,Ly,Lz]);g.setLineDash([6,4]);g.lineWidth=2;
-    poly(f.top,'rgba(154,134,255,.24)','#b9a8ff');poly(f.left,'rgba(154,134,255,.32)','#b9a8ff');poly(f.right,'rgba(154,134,255,.40)','#b9a8ff');
-    g.setLineDash([]);g.lineWidth=1;
-    const xs=[...f.top,...f.left,...f.right].map(q=>q[0]),ys=[...f.top,...f.left,...f.right].map(q=>q[1]);
-    sparkles(g,Math.min(...xs)+6,Math.min(...ys)+6,Math.max(...xs)-Math.min(...xs)-12,Math.max(...ys)-Math.min(...ys)-12);
-    return nU>1?Pt(Lx/2,Ly/2,Lz):Pt((a0[0]+Lx)/2,(a0[1]+Ly)/2,(a0[2]+Lz)/2)};
-  let c=null;
-  if(nU>1){c=mist();solids()}else{solids();if(nU)c=mist()}
-  if(c)label(g,p.sym,c[0],c[1],'center',44,'#e4dcff');
-  if(rev){
-    for(let i=0;i<(dx.unk?dx.n:sol(dx));i++){const q=Pt(s0[0]+i+.5,Ly,0);num(g,i+1,q[0]-9,q[1]+11)}
-    for(let j=0;j<(dy.unk?dy.n:sol(dy));j++){const q=Pt(Lx,s0[1]+j+.5,0);num(g,j+1,q[0]+9,q[1]+11)}
-    for(let k=0;k<(dz.unk?dz.n:sol(dz));k++){const q=Pt(Lx,s0[1],k+.5);num(g,k+1,q[0]+10,q[1])}
-  }
-  const off=rev?14:0;
-  let q=Pt(Lx/2,Ly,0);label(g,dx.label,q[0]-22-off,q[1]+22+off/2,'right');
-  q=Pt(Lx,Ly/2,0);label(g,dy.label,q[0]+22+off,q[1]+22+off/2,'left');
-  q=Pt(Lx,0,Lz/2);label(g,dz.label,q[0]+16+off,q[1],'left');
+  g.lineCap='round';
+  for(const[x1,y1,x2,y2]of[[126,84,314,236],[314,84,126,236]]){
+    g.strokeStyle='#120e20';g.lineWidth=12;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();
+    g.strokeStyle='#9a86ff';g.lineWidth=6;g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke()}
+  g.lineCap='butt';
+  const known=(x,y,txt)=>{const w=124,h=64,X=x-w/2,Y=y-h/2,t=4;
+    g.fillStyle=COL.edge;g.fillRect(X,Y,w,h);g.fillStyle=COL.mid;g.fillRect(X+2,Y+2,w-4,h-4);
+    g.fillStyle=COL.top;g.fillRect(X+2,Y+2,w-4,t);g.fillRect(X+2,Y+2,t,h-4);
+    g.fillStyle=COL.dark;g.fillRect(X+2,Y+h-2-t,w-4,t);g.fillRect(X+w-2-t,Y+2,t,h-4);
+    label(g,txt,x,y+2,'center',46,'#fff1cf')};
+  const unknown=(x,y)=>{const w=100,h=64,X=x-w/2,Y=y-h/2;
+    g.fillStyle='rgba(154,134,255,.30)';g.fillRect(X,Y,w,h);
+    g.setLineDash([6,4]);g.strokeStyle='#b9a8ff';g.lineWidth=2;g.strokeRect(X+1,Y+1,w-2,h-2);g.setLineDash([]);
+    sparkles(g,X+4,Y+4,w-8,h-8);label(g,'?',x,y+2,'center',46,'#e4dcff')};
+  known(cx,52,String(p.c));known(cx,H-52,String(p.b));unknown(66,cy);unknown(W-66,cy);
+  label(g,'× producto',cx+72,52,'left',22,'#ffe27a');
+  label(g,'+ suma',cx+72,H-52,'left',22,'#ffe27a');
+  $('#figCap').textContent='Arriba: producto · Abajo: suma';
 }
 
 /* ---------- Batalla ---------- */
 function startBattle(e){
   const gift=mpick(SPELL_IDS);S.spells[gift]++;
-  B={en:e,max:e.kind==='mix'?4:3,hp:e.kind==='mix'?4:3,gift};
+  B={en:e,max:e.n,hp:e.n,gift};
   $('#battle').hidden=false;document.body.style.overflow='hidden';
   $('#gift').hidden=false;$('#gift').textContent=`¡Dulce o truco! +1 ${SPELLS[gift].name}`;
   nextProblem();updateHUD();
 }
 function nextProblem(){
   const step=B.max-B.hp;let kind=B.en.kind,stage;
-  if(kind==='mix'){stage=['calc','desp','desp','calc'][step];kind=['prisma','rectangulo','prisma','cubo'][step]}
-  else{stage=['calc','calc','desp'][step];if(kind==='cubo')kind=['cubo','prisma','prisma'][step]}
+  if(kind==='mix'){stage=step%2?'tri':'x';kind=['facil','dificil','facil','dificil','dificil','dificil'][step]}
+  else stage=step===B.max-1?'tri':'x';   // el último problema de cada jefe pide factorizar el trinomio
   Object.assign(B,{p:gen(kind,stage),used:null,protego:false,rev:false,done:false});
   renderBattle();save();
 }
@@ -848,8 +817,9 @@ function renderBattle(){
   $('#stageTag').textContent=`${KIND[p.kind]} · ${B.max-B.hp+1}/${B.max}`;
   $('#qText').textContent=p.text;
   $('#hint').hidden=true;$('#fb').hidden=true;
-  {$('#unit').textContent=p.unit;const a=$('#ans');a.value='';a.disabled=false;$('#numForm button').disabled=false;
-    if(!matchMedia('(pointer:coarse)').matches)a.focus({preventScroll:true})}
+  {for(const id of['#ans1','#ans2']){const a=$(id);a.value='';a.disabled=false}
+    document.querySelectorAll('#numForm button').forEach(b=>b.disabled=false);
+    if(!matchMedia('(pointer:coarse)').matches)$('#ans1').focus({preventScroll:true})}
   renderSpells();drawFig();
 }
 function renderSpells(){
@@ -871,14 +841,16 @@ function cast(id){
   renderSpells();updateHUD();save();
 }
 function burst(txt){const d=document.createElement('div');d.id='burst';d.textContent=txt;document.body.append(d);setTimeout(()=>d.remove(),1000)}
-function answer(v){
-  if(!B||B.done)return;const p=B.p;let ok;
-  {const s=String(v).trim().replace(',','.');const x=Number(s);
-    if(s===''||!isFinite(x)){feedback('Escribe un número.','bad');return}
-    ok=Math.abs(x-p.answer)<1e-9}
+const parseNum=s=>{const t=String(s).trim();return t===''?NaN:Number(t)};
+function answer(){
+  if(!B||B.done)return;const p=B.p;
+  const u=parseNum($('#ans1').value),w=parseNum($('#ans2').value);
+  if(!isFinite(u)||!isFinite(w)){feedback('Escribe los dos números.','bad');return}
+  // producto y suma determinan el par de forma única: el orden no importa
+  const ok=u*w===p.c&&u+w===p.b;
   B.done=true;S.attempts++;
-  S.log.push({sala:B.en.room,tipo:KIND[p.kind],q:p.text,ok,res:`${v} ${p.unit}`,hechizo:B.used?SPELLS[B.used].name:'—'});
-  $('#ans').disabled=true;$('#numForm button').disabled=true;
+  S.log.push({sala:B.en.room,tipo:KIND[p.kind],q:p.short,ok,res:`${u} y ${w}`,hechizo:B.used?SPELLS[B.used].name:'—'});
+  document.querySelectorAll('#numForm input,#numForm button').forEach(e=>e.disabled=true);
   $('#gift').hidden=true;
   if(ok){
     S.correct++;const pts=B.used?10:15;S.score+=pts;B.hp--;
@@ -892,7 +864,7 @@ function answer(v){
     const bt=$('#battle');bt.classList.remove('flash');void bt.offsetWidth;bt.classList.add('flash');
     const lead=shield?'Protego te salvó.':'−1 vida.';
     if(S.hearts<=0)feedback(`${lead} ${p.explain}`,'bad','Sin vidas: volver',faint);
-    else feedback(`${lead} Era ${p.explain}`,'bad','Otro',nextProblem);
+    else feedback(`${lead} ${p.explain}`,'bad','Otro',nextProblem);
   }
   renderSpells();$('#btHearts').innerHTML=hearts();updateHUD();save();
 }
@@ -905,13 +877,13 @@ function feedback(txt,kind,btn,action){
 function win(pts){
   const e=B.en;S.defeated.push(e.id);S.score+=25;S.hearts=Math.min(5,S.hearts+1);
   drawStatic();
-  feedback(`¡Ganaste! +${pts + 25} +1 vida${e.kind!=='mix'?' · ¡Paso abierto →!':''}`,
+  feedback(`¡Ganaste! +${pts + 25} +1 vida${e.kind==='mix'?'':gateOpen(e.zone)?' · ¡Paso abierto →!':' · Falta otra bestia'}`,
     'ok',e.kind==='mix'?'Certificado':'Volver',e.kind==='mix'?()=>{closeBattle();endGame()}:closeBattle);
   save();
 }
 function closeBattle(){
   B=null;$('#battle').hidden=true;document.body.style.overflow='';
-  const e=guardOf(S.zone);say(!e||S.defeated.includes(e.id)?'¡Paso abierto! Sigue al este →':`${e.name} bloquea el paso.`);
+  const left=pending(S.zone);say(!left.length?'¡Paso abierto! Sigue al este →':left.length>1?`Faltan ${left.length} bestias. Sigue buscando.`:'Falta 1 bestia. Sigue buscando.');
   updateHUD();save();
 }
 function faint(){
@@ -924,7 +896,11 @@ $('#flee').onclick=()=>{
   if(S.hearts<=0){faint();return}
   closeBattle();say('Huiste: −1 vida.');
 };
-$('#numForm').addEventListener('submit',ev=>{ev.preventDefault();answer($('#ans').value)});
+$('#numForm').addEventListener('submit',ev=>{ev.preventDefault();answer()});
+for(const id of['#ans1','#ans2']){const i=$(id);
+  // solo dígitos; al escribir el primero pasa solo al segundo campo (los factores son de una cifra)
+  i.addEventListener('input',()=>{i.value=i.value.replace(/\D/g,'');if(id==='#ans1'&&i.value&&!$('#ans2').value)$('#ans2').focus()});
+  i.addEventListener('keydown',e=>{if(e.key==='Enter'&&id==='#ans1'&&!$('#ans2').value){e.preventDefault();$('#ans2').focus()}})}
 
 /* ---------- HUD ---------- */
 function hearts(){return Array.from({length:5},(_,i)=>`<span class="heart${i<S.hearts?'':' off'}"></span>`).join('')}
@@ -933,19 +909,19 @@ function updateHUD(){
   $('#hudHearts').innerHTML=hearts();$('#hudScore').textContent=S.score;
   $('#hudFrogs').textContent=`${S.frogs.filter(f=>f.caught).length}/5`;
   $('#hudSpells').innerHTML=SPELL_IDS.map(id=>`<span class="chip">${SPELLS[id].name} <b>×${S.spells[id]}</b></span>`).join('');
-  $('#minimap').innerHTML=Object.entries(MINI).map(([zid,[c,r]])=>{const z=ZONES[zid],e=ENEMIES.find(e=>e.zone===zid);
-    const i=ORDER.indexOf(zid),done=e&&S.defeated.includes(e.id),locked=i>0&&!gateOpen(ORDER[i-1]);
-    return `<span class="mm${zid===S.zone?' here':''}${done?' done':''}${locked?' locked':''}" style="grid-column:${c};grid-row:${r}">${done?'✓ ':''}${locked?'Cerrado':(e?e.book+' · ':'')+z.sub}</span>`}).join('');
+  $('#minimap').innerHTML=Object.entries(MINI).map(([zid,[c,r]])=>{const z=ZONES[zid],gs=guardsOf(zid),e=gs[0],won=gs.length-pending(zid).length;
+    const i=ORDER.indexOf(zid),done=gs.length>0&&won===gs.length,locked=i>0&&!gateOpen(ORDER[i-1]);
+    return `<span class="mm${zid===S.zone?' here':''}${done?' done':''}${locked?' locked':''}" style="grid-column:${c};grid-row:${r}">${done?'✓ ':''}${locked?'Cerrado':(e?e.book+' · ':'')+z.sub+(gs.length>1&&!done?` ${won}/${gs.length}`:'')}</span>`}).join('');
 }
 
 /* ---------- Guardado ---------- */
 const norm=s=>s.trim().replace(/\s+/g,' ');
-const keyFor=(n,g)=>`castillo-medidas:${norm(n).toLowerCase()}|${norm(g).toLowerCase()}`;
+const keyFor=(n,g)=>`castillo-x2:${norm(n).toLowerCase()}|${norm(g).toLowerCase()}`;
 function save(){if(!S)return;try{S.pos=[P.x,P.y];S.zone=S.zone||'sala';localStorage.setItem(keyFor(S.name,S.grupo),JSON.stringify(S))}catch(e){}}
 function load(n,g){try{return JSON.parse(localStorage.getItem(keyFor(n,g))||'null')}catch(e){return null}}
 function newState(name,grupo,vuelta=0){
   S={name,grupo,vuelta,house:hashStr(name.toLowerCase())%4,rng:hashStr(`${name.toLowerCase()}|${grupo.toLowerCase()}|${vuelta}`),
-    defeated:[],spells:{lumos:0,revelio:0,accio:0,protego:0},hearts:5,score:0,correct:0,attempts:0,log:[],pos:START.slice(),zone:'sala',met:[],frogs:[],done:false};
+    defeated:[],used:{facil:[],dificil:[]},spells:{lumos:0,revelio:0,accio:0,protego:0},hearts:5,score:0,correct:0,attempts:0,log:[],pos:START.slice(),zone:'sala',met:[],frogs:[],done:false};
   buildMazes();S.frogs=placeFrogs();
 }
 
@@ -1011,8 +987,8 @@ function drawBanner(){
   g.fillStyle='#2a2440';g.fillRect(0,52,192,12);
   g.fillStyle='#fff1cf';g.beginPath();g.arc(174,13,7,0,7);g.fill();g.fillStyle='#1b1630';g.beginPath();g.arc(178,10,6,0,7);g.fill();
   drawSprite(g,SPR.player,16,20,2);drawSprite(g,SPR.frog,62,22,1);drawSprite(g,SPR.pumpkin,58,36,1);drawSprite(g,SPR.bat,120,10,1);drawSprite(g,SPR.dragon,136,20,2);
-  const C=[COL.top,COL.mid,COL.dark];g.fillStyle='#1b1630';for(let i=0;i<3;i++)for(let j=0;j<=i;j++){const x=86+i*12,y=44-j*12;
-    g.fillStyle=COL.edge;g.fillRect(x,y,12,12);g.fillStyle=C[1];g.fillRect(x+1,y+1,10,10);g.fillStyle=C[0];g.fillRect(x+1,y+1,10,2);g.fillStyle=C[2];g.fillRect(x+1,y+9,10,2)}
+  g.fillStyle='#9a86ff';for(let i=0;i<=28;i++){g.fillRect(89+i,21+i,3,3);g.fillRect(117-i,21+i,3,3)}
+  for(const[x,y]of[[86,18],[114,18],[86,46],[114,46]]){g.fillStyle=COL.edge;g.fillRect(x,y,8,8);g.fillStyle=COL.mid;g.fillRect(x+1,y+1,6,6);g.fillStyle=COL.top;g.fillRect(x+1,y+1,6,1)}
 }
 drawBanner();
 
