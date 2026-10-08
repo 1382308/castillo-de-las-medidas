@@ -187,10 +187,10 @@ form.join input{font-family:var(--f-body);font-size:26px;padding:6px 10px;border
     <h1>El Castillo Embrujado</h1>
     <canvas id="banner" width="192" height="64" aria-hidden="true"></canvas>
     <form id="startForm" class="join">
-      <label for="nombre">Nombre completo</label>
+      <label for="nombre">Nombre del integrante 1</label>
       <input id="nombre" required maxlength="40" autocomplete="off" placeholder="Ej. Ana López Ruiz">
-      <label for="grupo">Grupo</label>
-      <input id="grupo" required maxlength="12" autocomplete="off" placeholder="Ej. 1A">
+      <label for="nombre2">Nombre del integrante 2</label>
+      <input id="nombre2" maxlength="40" autocomplete="off" placeholder="Ej. Luis Pérez Soto">
       <button class="btn" type="submit">Ponerme el sombrero</button>
     </form>
     <p id="hat" hidden></p>
@@ -344,10 +344,10 @@ const ENEMIES=[
   {id:'basilisk',kind:'facil',n:PER_BOSS,zone:'chamber',x:20,y:8,name:'Basilisk',room:'Book 2 · Chamber of Secrets',spr:'snake'},
   {id:'acromantula',kind:'facil',n:PER_BOSS,zone:'forest',x:20,y:8,name:'Acromantula',room:'Book 2 · Chamber of Secrets',spr:'spider'},
   {id:'werewolf',kind:'dificil',n:PER_BOSS,zone:'shack',x:20,y:8,name:'Werewolf',room:'Book 3 · Prisoner of Azkaban',spr:'werewolf'},
-  {id:'dementor',kind:'dificil',n:PER_BOSS,zone:'azkaban',x:20,y:8,name:'Dementor',room:'Book 3 · Prisoner of Azkaban',spr:'dementor',pal:{Z:'#6a62a0',z:'#453f78',u:'#e4e7f0'}},
-  {id:'horntail',kind:'dificil',n:PER_BOSS,zone:'arena',x:20,y:8,name:'Hungarian Horntail',room:'Book 4 · Goblet of Fire',spr:'dragon',pal:{d:'#4a4a58',D:'#22222c',y:'#b07a30',e:'#ffd23a'}},
-  {id:'deatheater',kind:'dificil',n:PER_BOSS,zone:'mysteries',x:20,y:8,name:'Death Eater',room:'Book 5 · Order of the Phoenix',spr:'deatheater'},
-  {id:'inferius',kind:'dificil',n:PER_BOSS,zone:'cave',x:20,y:8,name:'Inferius',room:'Book 6 · Half-Blood Prince',spr:'zombie',pal:{q:'#b4c2d2',Q:'#6d7d92',P:'#3a4258'}},
+  {id:'dementor',kind:'facil',n:PER_BOSS,zone:'azkaban',x:20,y:8,name:'Dementor',room:'Book 3 · Prisoner of Azkaban',spr:'dementor',pal:{Z:'#6a62a0',z:'#453f78',u:'#e4e7f0'}},
+  {id:'horntail',kind:'facil',n:PER_BOSS,zone:'arena',x:20,y:8,name:'Hungarian Horntail',room:'Book 4 · Goblet of Fire',spr:'dragon',pal:{d:'#4a4a58',D:'#22222c',y:'#b07a30',e:'#ffd23a'}},
+  {id:'deatheater',kind:'facil',n:PER_BOSS,zone:'mysteries',x:20,y:8,name:'Death Eater',room:'Book 5 · Order of the Phoenix',spr:'deatheater'},
+  {id:'inferius',kind:'facil',n:PER_BOSS,zone:'cave',x:20,y:8,name:'Inferius',room:'Book 6 · Half-Blood Prince',spr:'zombie',pal:{q:'#b4c2d2',Q:'#6d7d92',P:'#3a4258'}},
   {id:'jefe',kind:'mix',n:FINAL_N,zone:'cemen',x:11,y:8,name:'The Nameless One',room:'Final · Little Hangleton Graveyard',spr:'nameless',pal:{E:'#e07bff',z:'#3a2466',Z:'#5a3a96',D:'#8a5cd0'}}
 ];
 
@@ -612,10 +612,10 @@ const ZONES={
   chamber:{name:'Chamber of Secrets',sub:'Tablas 1–6',exits:{w:'dungeon',e:'forest'},gate:'e',maze:'#',theme:{wall:['#0e2016','#1d4a2c','#2a6a40'],style:'brick',floor:['#1f3a2a','#183024']}},
   forest:{name:'Forbidden Forest',sub:'Tablas 1–6',exits:{w:'chamber',e:'shack'},gate:'e',maze:'#',theme:{wall:['#0d1a10','#1f4a24','#2f6a34'],style:'hedge',floor:['#243420','#1c2a18']}},
   shack:{name:'Shrieking Shack',sub:'Tablas 7–9',exits:{w:'forest',e:'azkaban'},gate:'e',maze:'#',theme:{wall:['#2a1a0e','#5c3a1b','#7a4f28'],style:'plank',floor:['#4a3524','#3c2b1d']}},
-  azkaban:{name:'Azkaban',sub:'Tablas 7–9',exits:{w:'shack',e:'arena'},gate:'e',maze:'#',theme:{wall:['#0c0e16','#232838','#343b52'],style:'brick',floor:['#1a1e2c','#141824']}},
-  arena:{name:'Dragon Arena',sub:'Tablas 7–9',exits:{w:'azkaban',e:'mysteries'},gate:'e',maze:'#',theme:{wall:['#2a1c10','#6b4a2a','#8a6238'],style:'rock',floor:['#7a5a38','#684b2e']}},
-  mysteries:{name:'Department of Mysteries',sub:'Tablas 7–9',exits:{w:'arena',e:'cave'},gate:'e',maze:'#',theme:{wall:['#0a0a18','#1c1c3a','#2c2c5c'],style:'brick',floor:['#15152c','#101024']}},
-  cave:{name:'Horcrux Cave',sub:'Tablas 7–9',exits:{w:'mysteries',e:'cemen'},gate:'e',maze:'#',theme:{wall:['#0a1a1e','#1d3c44','#2c5a66'],style:'rock',floor:['#16282e','#112024']}},
+  azkaban:{name:'Azkaban',sub:'Tablas 1–6',exits:{w:'shack',e:'arena'},gate:'e',maze:'#',theme:{wall:['#0c0e16','#232838','#343b52'],style:'brick',floor:['#1a1e2c','#141824']}},
+  arena:{name:'Dragon Arena',sub:'Tablas 1–6',exits:{w:'azkaban',e:'mysteries'},gate:'e',maze:'#',theme:{wall:['#2a1c10','#6b4a2a','#8a6238'],style:'rock',floor:['#7a5a38','#684b2e']}},
+  mysteries:{name:'Department of Mysteries',sub:'Tablas 1–6',exits:{w:'arena',e:'cave'},gate:'e',maze:'#',theme:{wall:['#0a0a18','#1c1c3a','#2c2c5c'],style:'brick',floor:['#15152c','#101024']}},
+  cave:{name:'Horcrux Cave',sub:'Tablas 1–6',exits:{w:'mysteries',e:'cemen'},gate:'e',maze:'#',theme:{wall:['#0a1a1e','#1d3c44','#2c5a66'],style:'rock',floor:['#16282e','#112024']}},
   cemen:{name:'Little Hangleton Graveyard',sub:'Jefe final',exits:{w:'cave'},wall:'t',open:'G',rows:[
 "GGGGGGGGGGGGGGGGGGGGGG",
 "GGRGGRGGRGGGGRGGRGGRGG",
@@ -854,7 +854,7 @@ function renderSlide(t){
 /* ---------- Generador de problemas: juego de la X (producto arriba, suma abajo, solo positivos) ---------- */
 // facil: tablas del 1 al 6 · dificil: al menos un factor del 7 al 9 (el otro del 2 al 9). Sin pares repetidos hasta agotar el banco.
 const PAIRS={facil:[],dificil:[]};
-for(let a=1;a<=6;a++)for(let b=a+1;b<=6;b++)PAIRS.facil.push([a,b]);
+for(let a=1;a<=6;a++)for(let b=a;b<=6;b++)PAIRS.facil.push([a,b]);
 for(let b=7;b<=9;b++)for(let a=2;a<b;a++)PAIRS.dificil.push([a,b]);
 const tri=(b,c)=>`x² + ${b}x + ${c}`;
 const fac=(m,n)=>`(x + ${m})(x + ${n})`;
@@ -914,7 +914,7 @@ function startBattle(e){
 }
 function nextProblem(){
   const step=B.max-B.hp;let kind=B.en.kind,stage;
-  if(kind==='mix'){stage=step%2?'tri':'x';kind=['facil','dificil','facil','dificil','dificil','dificil'][step]}
+  if(kind==='mix'){stage=step%2?'tri':'x';kind='dificil'}
   else stage=step===B.max-1?'tri':'x';   // el último problema de cada jefe pide factorizar el trinomio
   Object.assign(B,{p:gen(kind,stage),used:null,protego:false,rev:false,done:false});
   renderBattle();save();
@@ -1045,13 +1045,13 @@ function enterGame(){
   if(!S.frogs.length||S.frogs.some(f=>!ZONES[f.zone]||!walkable(f.x,f.y,f.zone)))S.frogs=placeFrogs();
   if(!walkable(S.pos[0],S.pos[1])){S.zone='sala';S.pos=START.slice()}
   Object.assign(P,{x:S.pos[0],y:S.pos[1],px:S.pos[0]*TS,py:S.pos[1]*TS,moving:false});TR=null;APP=null;
-  $('#hudName').textContent=`${S.name} · ${S.grupo}`;$('#hudHouse').textContent=HOUSES[S.house].name;
+  $('#hudName').textContent=S.name;$('#hudHouse').textContent=HOUSES[S.house].name;
   show('game');enterZone();
 }
 $('#startForm').addEventListener('submit',ev=>{
   ev.preventDefault();
-  const name=norm($('#nombre').value),grupo=norm($('#grupo').value);
-  if(!name||!grupo)return;
+  const name=[norm($('#nombre').value),norm($('#nombre2').value)].filter(Boolean).join(' y '),grupo='';
+  if(!name)return;
   const saved=load(name,grupo);
   if(saved){S=saved;if(S.done){applyHouse();endGame();return}
     const hat=$('#hat');hat.hidden=false;hat.textContent='¡De vuelta!';
@@ -1065,7 +1065,7 @@ $('#startForm').addEventListener('submit',ev=>{
 function endGame(){
   S.done=true;save();
   const pct=S.attempts?Math.round(100*S.correct/S.attempts):0;
-  $('#cName').textContent=S.name;$('#cMeta').textContent=`Grupo ${S.grupo} · ${HOUSES[S.house].name}`;
+  $('#cName').textContent=S.name;$('#cMeta').textContent=HOUSES[S.house].name;
   $('#cScore').textContent=S.score;$('#cOk').textContent=`${S.correct}/${S.attempts}`;$('#cPct').textContent=`${pct}%`;
   $('#cCode').textContent=hashStr(`${S.name}|${S.grupo}|${S.score}|${S.correct}|${S.attempts}|${S.vuelta}`).toString(36).toUpperCase().padStart(7,'0').slice(-7);
   const tb=$('#logBody');tb.innerHTML='';
